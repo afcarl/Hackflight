@@ -223,7 +223,7 @@ namespace hf {
 
             bool getQuaternion(float quat[4])
             {
-                if(_gyroCycleCount > QUATERNION_DIVISOR) {
+                if(_gyroCycleCount == QUATERNION_DIVISOR) {
 
                     // Reset accumulators
                     _gyroCycleCount = 0;
