@@ -81,7 +81,7 @@ namespace hf {
 
             // Quaternion calculation
             const uint8_t  QUATERNION_UPDATES_PER_CYCLE = 10;  // update quaternion this many times per gyro aquisition
-            const uint16_t QUATERNION_UPDATE_RATE       = 50;   // Hertz
+            const uint16_t QUATERNION_DIVISOR           = 5;   // report a new quaternion available after this many gyro acquisitions
 
             // Global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
             const float GYRO_MEAS_ERROR = M_PI * (40.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
@@ -107,10 +107,9 @@ namespace hf {
 
             // Quaternion support
             MadgwickQuaternion _quaternionCalculator = MadgwickQuaternion(BETA);
-            uint32_t _sumCount = 0;                          // used to control display output rate
-            const uint16_t SUM_COUNT_MAX = 1000 / QUATERNION_UPDATE_RATE;
-            uint32_t _timePrev = 0;                          // used to calculate integration interval
-            float _q[4] = {1.0f, 0.0f, 0.0f, 0.0f};          // vector to hold quaternion
+            uint32_t _gyroCycleCount = 0;            // used to under-sample quaternions compute in gyro update
+            uint32_t _timePrev = 0;                  // used to calculate integration interval
+            float _q[4] = {1.0f, 0.0f, 0.0f, 0.0f};  // vector to hold quaternion
 
             // We compute these at startup
             float _gyroBias[3]        = {0,0,0};
@@ -164,6 +163,9 @@ namespace hf {
 
                     if (_imu.checkNewAccelGyroData()) {
 
+                        // This will be reset in getQuaternion()
+                        _gyroCycleCount++;
+
                         _imu.readMPU9250Data(_imuData); 
 
                         // Convert the accleration value into g's
@@ -202,8 +204,6 @@ namespace hf {
                             float deltat = ((timeCurr - _timePrev)/1000000.0f); 
                             _timePrev = timeCurr;
 
-                            _sumCount++;
-
                             _quaternionCalculator.update(-ax, ay, az, gx, -gy, -gz, my, -mx, mz, deltat, _q);
                         }
 
@@ -223,10 +223,10 @@ namespace hf {
 
             bool getQuaternion(float quat[4])
             {
-                if(_sumCount > SUM_COUNT_MAX) {
+                if(_gyroCycleCount > QUATERNION_DIVISOR) {
 
                     // Reset accumulators
-                    _sumCount = 0;
+                    _gyroCycleCount = 0;
 
                     // Copy quaternion values back out
                     memcpy(quat, _q, 4*sizeof(float));
