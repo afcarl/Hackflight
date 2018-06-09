@@ -33,6 +33,7 @@ namespace hf {
         // See http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
         static const uint8_t MSP_RC_NORMAL        =    121;
         static const uint8_t MSP_ATTITUDE_RADIANS =    122; 
+        static const uint8_t MSP_ALTITUDE_METERS  =    123; 
         static const uint8_t MSP_SET_MOTOR_NORMAL =    215;    
         static const uint8_t MSP_SET_ARMED        =    216;    
 
@@ -105,6 +106,9 @@ namespace hf {
 
         void serializeFloats(float f[], uint8_t n)
         {
+            _outBufSize = 0;
+            _outBufIndex = 0;
+
             headSerialReply(4*n);
 
             for (uint8_t k=0; k<n; ++k) {
@@ -171,20 +175,23 @@ namespace hf {
                     break;
 
                 case MSP_RC_NORMAL:
-                    _outBufSize = 0;
-                    _outBufIndex = 0;
                     serializeFloats(_receiver->rawvals, 8);
                     break;
 
                 case MSP_ATTITUDE_RADIANS: 
+                    serializeFloats(_vehicleState->eulerAngles, 3);
+                    break;
+
+                case MSP_ALTITUDE_METERS: 
                     {
-                        _outBufSize = 0;
-                        _outBufIndex = 0;
-                        serializeFloats(_vehicleState->eulerAngles, 3);
+						float vals[2];
+						vals[0] = _vehicleState->altitude;
+						vals[1] = _vehicleState->vario;
+                        serializeFloats(vals, 2);
                     }
                     break;
 
-                    // don't know how to handle the (valid) message, indicate error
+                // don't know how to handle the (valid) message, indicate error
                 default:                   
                     headSerialError(0);
                     break;
