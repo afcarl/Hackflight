@@ -66,6 +66,7 @@ namespace hf {
 
                 if (_board->getQuaternion(q)) {
 
+					// Compute Euler angles from quaternion
                     _state.eulerAngles[0] = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
                     _state.eulerAngles[1] = asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
                     _state.eulerAngles[2] = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]); 
@@ -208,6 +209,10 @@ namespace hf {
                 // Start unarmed
                 _state.armed = false;
                 _failsafe = false;
+
+				// XXX dummy values for altitude, vario for now
+				_state.altitude = 99;
+				_state.vario = 88;
 
             } // init
 

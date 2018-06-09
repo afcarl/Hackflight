@@ -33,6 +33,8 @@ typedef struct {
 
 typedef struct {
 
+	float altitude;
+	float vario;
     float eulerAngles[3];
     bool armed;
 
