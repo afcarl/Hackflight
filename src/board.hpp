@@ -37,10 +37,6 @@ namespace hf {
             virtual bool getGyrometer(float gyroRates[3]) = 0;
             virtual void writeMotor(uint8_t index, float value) = 0;
 
-            //------------------------ Support for additional PID controllers --------------------------------------------
-            virtual bool getAccelerometer(float accelGs[3]) { (void)accelGs; return false; }
-            virtual bool getBarometer(float & pressure) { (void)pressure; return false; }
-
             //------------------------------- Serial communications via MSP ----------------------------------------------
             virtual uint8_t serialAvailableBytes(void) { return 0; }
             virtual uint8_t serialReadByte(void)  { return 0; }
@@ -51,6 +47,9 @@ namespace hf {
 
             //--------------------------------------- Debugging ----------------------------------------------------------
             static void  outbuf(char * buf);
+
+            //--------------------- Support for ground-truthing via simulation -------------------------------------------
+			virtual bool getGroundTruth(vehicleState_t & state) { (void)state;  return false;}
 
     }; // class Board
 

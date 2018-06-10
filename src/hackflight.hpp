@@ -27,7 +27,6 @@
 #include "stabilizer.hpp"
 #include "debug.hpp"
 #include "datatypes.hpp"
-#include "altitude.hpp"
 
 namespace hf {
 
@@ -108,17 +107,11 @@ namespace hf {
                 }
             }
 
-            void checkBarometer(void)
+			// a hack to work with the simulator's ground-truth values
+            void checkGroundTruth(void)
             {
-                float pressure;
-                if (_board->getBarometer(pressure)) {
-                }
-            }
-
-            void checkAccelerometer(void)
-            {
-                float accelGs[3];
-                if (_board->getAccelerometer(accelGs)) {
+                if (_board->getGroundTruth(_state)) {
+			        Debug::printf("%f %f\n", _state.altitude, _state.vario);
                 }
             }
 
@@ -206,7 +199,7 @@ namespace hf {
 
                 // Tell the mixer which board to use
                 _mixer->board = board; 
-
+				
                 // Start unarmed
                 _state.armed = false;
                 _failsafe = false;
@@ -222,8 +215,7 @@ namespace hf {
                 checkGyroRates();
                 checkQuaternion();
                 checkReceiver();
-                checkAccelerometer();
-                checkBarometer();
+                checkGroundTruth(); // a hack to work with the simulator
             } 
 
     }; // class Hackflight
