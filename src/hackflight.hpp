@@ -27,6 +27,7 @@
 #include "stabilizer.hpp"
 #include "debug.hpp"
 #include "datatypes.hpp"
+#include "altitude.hpp"
 
 namespace hf {
 
