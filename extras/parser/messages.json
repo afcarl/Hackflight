@@ -23,6 +23,14 @@
    {"estalt"  : "float"}, 
    {"targalt" : "float"}],
 
+  "SET_DEMANDS": 
+  [{"ID": 209},
+   {"comment": "We send floating-point values in [0,1], rather than PWM"}, 
+   {"throttle": "float"},
+   {"roll":     "float"},
+   {"pitch":    "float"},
+   {"yaw":      "float"}],
+
   "SET_MOTOR_NORMAL": 
   [{"ID": 215},
    {"comment": "We send floating-point values in [0,1], rather than PWM"}, 

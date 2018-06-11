@@ -202,7 +202,7 @@ namespace hf {
 			// XXX ad-hoc for Nengo
             void altitudeModifyDemands(demands_t & demands)
             {
-				Debug::printf(">>>>>>>>>>>>>>> HOLDING: %d", _state.holdingAltitude);
+				//Debug::printf(">>>>>>>>>>>>>>> HOLDING: %d", _state.holdingAltitude);
                 if (_state.holdingAltitude) {
 
                     demands.throttle = _state.initialThrottleHold /*+pid*/;

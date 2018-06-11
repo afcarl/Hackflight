@@ -33,6 +33,7 @@ namespace hf {
         // See http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
         static const uint8_t MSP_RC_NORMAL        =    121;
         static const uint8_t MSP_ATTITUDE_RADIANS =    122; 
+        static const uint8_t MSP_SET_DEMANDS      =    209;    
         static const uint8_t MSP_SET_MOTOR_NORMAL =    215;    
         static const uint8_t MSP_SET_ARMED        =    216;    
 
@@ -176,6 +177,17 @@ namespace hf {
                     headSerialReply(0);
                     break;
 
+			    case MSP_SET_DEMANDS:
+					{
+ 					    float throttle = readFloat();
+					    float roll     = readFloat();
+					    float pitch    = readFloat();
+					    float yaw      = readFloat();
+					    Debug::printf("t: %+2.2f   r: %+2.2f   p: %+2.2f   y: %+2.2f",
+									  throttle, roll, pitch, yaw);
+					}
+					break;
+
                 case MSP_RC_NORMAL:
                     serializeFloats(_receiver->rawvals, 8);
                     break;
@@ -184,6 +196,7 @@ namespace hf {
                     serializeFloats(_vehicleState->eulerAngles, 3);
                     break;
 
+				// XXX ad-hoc for Nengo
                 case MSP_ALTITUDE_TARGET: 
                     {
 						float vals[2];
