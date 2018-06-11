@@ -97,6 +97,9 @@ namespace hf {
                     // Run stabilization to get updated demands
                     _stabilizer->modifyDemands(gyroRates, demands);
 
+                    // Run altitude estimator PIDs
+                    altitudeModifyDemands(demands);
+
                     // Sync failsafe to gyro loop
                     checkFailsafe();
 
@@ -151,6 +154,7 @@ namespace hf {
                 // Detect aux switch changes for altitude-hold, loiter, etc.
                 if (_receiver->demands.aux != _auxState) {
                     _auxState = _receiver->demands.aux;
+                    handleAuxSwitch(_receiver->demands);
                 }
 
                 // Cut motors on throttle-down
@@ -179,6 +183,33 @@ namespace hf {
                 }
             }
 
+			// XXX ad-hoc for Nengo
+            void handleAuxSwitch(demands_t & demands)
+            {
+                // Start
+                if (demands.aux > 0) {
+                    _state.holdingAltitude = true;
+                    _state.initialThrottleHold = demands.throttle;
+                    _state.altHold = _state.altitude;
+                }
+
+                // Stop
+                else {
+                    _state.holdingAltitude = false;
+                }
+            }
+
+			// XXX ad-hoc for Nengo
+            void altitudeModifyDemands(demands_t & demands)
+            {
+				Debug::printf(">>>>>>>>>>>>>>> HOLDING: %d", _state.holdingAltitude);
+                if (_state.holdingAltitude) {
+
+                    demands.throttle = _state.initialThrottleHold /*+pid*/;
+                }
+            }
+
+
 
         public:
 
@@ -203,7 +234,11 @@ namespace hf {
                 _state.armed = false;
                 _failsafe = false;
 
-            } // init
+				// XXX Set altitude-hold state for ad-hoc Nengo project
+                _state.initialThrottleHold = 0;
+                _state.holdingAltitude = false;
+
+             } // init
 
             void update(void)
             {
