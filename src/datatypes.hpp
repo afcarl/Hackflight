@@ -40,7 +40,6 @@ typedef struct {
 
 	// XXX ad-hoc, for Nengo project
 	float targetAltitude; 
-	float altHold;
 	bool holdingAltitude;
 	float initialThrottleHold;  // [0,1]  
 

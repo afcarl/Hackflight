@@ -190,7 +190,7 @@ namespace hf {
                 if (demands.aux > 0) {
                     _state.holdingAltitude = true;
                     _state.initialThrottleHold = demands.throttle;
-                    _state.altHold = _state.altitude;
+                    _state.targetAltitude = _state.altitude;
                 }
 
                 // Stop
