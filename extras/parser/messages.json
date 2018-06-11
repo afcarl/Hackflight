@@ -17,10 +17,11 @@
    {"pitch"   : "float"},
    {"yaw"     : "float"}],
 
-  "ALTITUDE_METERS": 
+  "ALTITUDE_TARGET": 
   [{"ID": 123},
+   {"comment": "Ad-hoc message for Nengo altitude-hold project"}, 
    {"estalt"  : "float"}, 
-   {"vario"   : "float"}],
+   {"targalt" : "float"}],
 
   "SET_MOTOR_NORMAL": 
   [{"ID": 215},

@@ -38,4 +38,6 @@ typedef struct {
     float eulerAngles[3];
     bool armed;
 
+	float targetAltitude; // XXX ad-hoc, for Nengo project
+
 } vehicleState_t;

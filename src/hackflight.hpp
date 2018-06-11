@@ -111,7 +111,6 @@ namespace hf {
             void checkGroundTruth(void)
             {
                 if (_board->getGroundTruth(_state)) {
-			        Debug::printf("%f %f\n", _state.altitude, _state.vario);
                 }
             }
 
@@ -203,10 +202,6 @@ namespace hf {
                 // Start unarmed
                 _state.armed = false;
                 _failsafe = false;
-
-				// XXX dummy values for altitude, vario for now
-				_state.altitude = 99;
-				_state.vario = 88;
 
             } // init
 

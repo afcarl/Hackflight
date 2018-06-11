@@ -33,9 +33,11 @@ namespace hf {
         // See http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
         static const uint8_t MSP_RC_NORMAL        =    121;
         static const uint8_t MSP_ATTITUDE_RADIANS =    122; 
-        static const uint8_t MSP_ALTITUDE_METERS  =    123; 
         static const uint8_t MSP_SET_MOTOR_NORMAL =    215;    
         static const uint8_t MSP_SET_ARMED        =    216;    
+
+		// XXX Ad-hoc, for Nengo altitude-hold project
+        static const uint8_t MSP_ALTITUDE_TARGET  =    123; 
 
         static const int INBUF_SIZE  = 128;
         static const int OUTBUF_SIZE = 128;
@@ -182,11 +184,11 @@ namespace hf {
                     serializeFloats(_vehicleState->eulerAngles, 3);
                     break;
 
-                case MSP_ALTITUDE_METERS: 
+                case MSP_ALTITUDE_TARGET: 
                     {
 						float vals[2];
 						vals[0] = _vehicleState->altitude;
-						vals[1] = _vehicleState->vario;
+						vals[1] = _vehicleState->targetAltitude;
                         serializeFloats(vals, 2);
                     }
                     break;
