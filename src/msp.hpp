@@ -33,7 +33,6 @@ namespace hf {
         // See http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
         static const uint8_t MSP_RC_NORMAL        =    121;
         static const uint8_t MSP_ATTITUDE_RADIANS =    122; 
-        static const uint8_t MSP_DEMANDS          =    125;    
         static const uint8_t MSP_SET_DEMANDS      =    225;    
         static const uint8_t MSP_SET_MOTOR_NORMAL =    215;    
         static const uint8_t MSP_SET_ARMED        =    216;    
@@ -53,11 +52,13 @@ namespace hf {
             HEADER_CMD
         } serialState_t;
 
+        // Passed to init() by Hackflight 
         vehicleState_t * _vehicleState;
-        demands_t * _demands; 
         Receiver * _receiver;
         Mixer * _mixer;
 
+        // Received from companion board
+        demands_t _demands; 
 
         uint8_t _checksum;
         uint8_t _inBuf[INBUF_SIZE];
@@ -180,15 +181,11 @@ namespace hf {
                     headSerialReply(0);
                     break;
 
-                case MSP_DEMANDS:
-                    serializeFloats((float *)_demands, 4);
-                    break;
-
                 case MSP_SET_DEMANDS:
-                    _demands->throttle = readFloat();
-                    _demands->roll     = readFloat();
-                    _demands->pitch    = readFloat();
-                    _demands->yaw      = readFloat();
+                    _demands.throttle = readFloat();
+                    _demands.roll     = readFloat();
+                    _demands.pitch    = readFloat();
+                    _demands.yaw      = readFloat();
                     break;
 
                 case MSP_RC_NORMAL:
@@ -218,12 +215,13 @@ namespace hf {
 
         protected:
 
-        void init(vehicleState_t * vehicleState, demands_t * demands, Receiver * receiver, Mixer * mixer)
+        void init(vehicleState_t * vehicleState, Receiver * receiver, Mixer * mixer)
         {
             _vehicleState = vehicleState;
-            _demands = demands;
             _receiver = receiver;
             _mixer = mixer;
+
+            _demands = {0, 0, 0, 0};
 
             _checksum = 0;
             _outBufIndex = 0;
@@ -278,6 +276,15 @@ namespace hf {
             } // switch (_parserState)
 
         } // update
+
+        // For use with companion boards, etc.
+        void modifyDemands(demands_t & demands)
+        {
+            demands.throttle += _demands.throttle;
+            demands.roll     += _demands.roll;
+            demands.pitch    += _demands.pitch;
+            demands.yaw      += _demands.yaw;
+        }
 
         uint8_t availableBytes(void)
         {

@@ -46,9 +46,6 @@ namespace hf {
             // Vehicle state
             vehicleState_t _state;
 
-            // Throttle, roll, pitch yaw demands
-            demands_t _demands;
-
             // Auxiliary switch state for change detection
             uint8_t _auxState;
 
@@ -93,21 +90,28 @@ namespace hf {
 
                 if (_board->getGyrometer(gyroRates)) {
 
+                    demands_t demands;
+
                     // Start with demands from receiver
-                    memcpy(&_demands, &_receiver->demands, sizeof(demands_t));
+                    memcpy(&demands, &_receiver->demands, sizeof(demands_t));
 
                     // Run stabilization to get updated demands
-                    _stabilizer->modifyDemands(gyroRates, _demands);
+                    _stabilizer->modifyDemands(gyroRates, demands);
 
-                    // Run altitude estimator PIDs
-                    altitudeModifyDemands(_demands);
+                    // Add in any corrections sent over MSP (companion board, etc.)
+                    _msp.modifyDemands(demands);
 
                     // Sync failsafe to gyro loop
                     checkFailsafe();
 
                     // Use updated demands to run motors
                     if (_state.armed && !_failsafe && !_receiver->throttleIsDown()) {
-                        _mixer->runArmed(_demands);
+                        Debug::printf("%2.2f %+2.2f %+2.2f %+2.2f", 
+                                demands.throttle, demands.roll, demands.pitch, demands.yaw);
+                        _mixer->runArmed(demands);
+                    }
+                    else {
+                        Debug::printf("NOT FLYING");
                     }
                 }
             }
@@ -201,18 +205,6 @@ namespace hf {
                 }
             }
 
-			// XXX ad-hoc for Nengo
-            void altitudeModifyDemands(demands_t & demands)
-            {
-				//Debug::printf(">>>>>>>>>>>>>>> HOLDING: %d", _state.holdingAltitude);
-                if (_state.holdingAltitude) {
-
-                    demands.throttle = _state.initialThrottleHold /*+pid*/;
-                }
-            }
-
-
-
         public:
 
             void init(Board * board, Receiver * receiver, Stabilizer * stabilizer, Mixer * mixer)
@@ -224,7 +216,7 @@ namespace hf {
                 _mixer      = mixer;
 
                 // Initialize MSP (serial comms)
-                _msp.init(&_state, &_demands, receiver, mixer);
+                _msp.init(&_state, receiver, mixer);
 
                 // Initialize the receiver
                 _receiver->init();
