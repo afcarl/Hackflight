@@ -201,7 +201,9 @@ namespace hf {
                     {
 						float vals[2];
 						vals[0] = _vehicleState->altitude;
-						vals[1] = _vehicleState->targetAltitude;
+						vals[1] = _vehicleState->holdingAltitude ?
+                            _vehicleState->targetAltitude :
+                            _vehicleState->altitude;
                         serializeFloats(vals, 2);
                     }
                     break;

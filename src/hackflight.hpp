@@ -195,7 +195,6 @@ namespace hf {
                 // Start
                 if (demands.aux > 0) {
                     _state.holdingAltitude = true;
-                    _state.initialThrottleHold = demands.throttle;
                     _state.targetAltitude = _state.altitude;
                 }
 
@@ -229,7 +228,6 @@ namespace hf {
                 _failsafe = false;
 
 				// XXX Set altitude-hold state for ad-hoc Nengo project
-                _state.initialThrottleHold = 0;
                 _state.holdingAltitude = false;
 
              } // init

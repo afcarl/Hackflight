@@ -19,7 +19,7 @@
 
   "ALTITUDE_TARGET": 
   [{"ID": 123},
-   {"comment": "Ad-hoc message for Nengo altitude-hold project"}, 
+   {"comment": "XXX Ad-hoc message for Nengo altitude-hold project"}, 
    {"estalt"  : "float"}, 
    {"targalt" : "float"}],
 
