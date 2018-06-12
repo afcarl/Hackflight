@@ -33,7 +33,8 @@ namespace hf {
         // See http://www.multiwii.com/wiki/index.php?title=Multiwii_Serial_Protocol
         static const uint8_t MSP_RC_NORMAL        =    121;
         static const uint8_t MSP_ATTITUDE_RADIANS =    122; 
-        static const uint8_t MSP_SET_DEMANDS      =    209;    
+        static const uint8_t MSP_DEMANDS          =    125;    
+        static const uint8_t MSP_SET_DEMANDS      =    225;    
         static const uint8_t MSP_SET_MOTOR_NORMAL =    215;    
         static const uint8_t MSP_SET_ARMED        =    216;    
 
@@ -53,8 +54,10 @@ namespace hf {
         } serialState_t;
 
         vehicleState_t * _vehicleState;
+        demands_t * _demands; 
         Receiver * _receiver;
         Mixer * _mixer;
+
 
         uint8_t _checksum;
         uint8_t _inBuf[INBUF_SIZE];
@@ -67,7 +70,7 @@ namespace hf {
         uint8_t _dataSize;
 
         serialState_t   _parserState;
-
+        
         void serialize8(uint8_t a)
         {
             _outBuf[_outBufSize++] = a;
@@ -177,16 +180,16 @@ namespace hf {
                     headSerialReply(0);
                     break;
 
-			    case MSP_SET_DEMANDS:
-					{
- 					    float throttle = readFloat();
-					    float roll     = readFloat();
-					    float pitch    = readFloat();
-					    float yaw      = readFloat();
-					    Debug::printf("t: %+2.2f   r: %+2.2f   p: %+2.2f   y: %+2.2f",
-									  throttle, roll, pitch, yaw);
-					}
-					break;
+                case MSP_DEMANDS:
+                    serializeFloats((float *)_demands, 4);
+                    break;
+
+                case MSP_SET_DEMANDS:
+                    _demands->throttle = readFloat();
+                    _demands->roll     = readFloat();
+                    _demands->pitch    = readFloat();
+                    _demands->yaw      = readFloat();
+                    break;
 
                 case MSP_RC_NORMAL:
                     serializeFloats(_receiver->rawvals, 8);
@@ -215,9 +218,10 @@ namespace hf {
 
         protected:
 
-        void init(vehicleState_t * vehicleState, Receiver * receiver, Mixer * mixer)
+        void init(vehicleState_t * vehicleState, demands_t * demands, Receiver * receiver, Mixer * mixer)
         {
             _vehicleState = vehicleState;
+            _demands = demands;
             _receiver = receiver;
             _mixer = mixer;
 

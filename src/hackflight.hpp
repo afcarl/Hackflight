@@ -46,6 +46,9 @@ namespace hf {
             // Vehicle state
             vehicleState_t _state;
 
+            // Throttle, roll, pitch yaw demands
+            demands_t _demands;
+
             // Auxiliary switch state for change detection
             uint8_t _auxState;
 
@@ -91,21 +94,20 @@ namespace hf {
                 if (_board->getGyrometer(gyroRates)) {
 
                     // Start with demands from receiver
-                    demands_t demands;
-                    memcpy(&demands, &_receiver->demands, sizeof(demands_t));
+                    memcpy(&_demands, &_receiver->demands, sizeof(demands_t));
 
                     // Run stabilization to get updated demands
-                    _stabilizer->modifyDemands(gyroRates, demands);
+                    _stabilizer->modifyDemands(gyroRates, _demands);
 
                     // Run altitude estimator PIDs
-                    altitudeModifyDemands(demands);
+                    altitudeModifyDemands(_demands);
 
                     // Sync failsafe to gyro loop
                     checkFailsafe();
 
                     // Use updated demands to run motors
                     if (_state.armed && !_failsafe && !_receiver->throttleIsDown()) {
-                        _mixer->runArmed(demands);
+                        _mixer->runArmed(_demands);
                     }
                 }
             }
@@ -222,7 +224,7 @@ namespace hf {
                 _mixer      = mixer;
 
                 // Initialize MSP (serial comms)
-                _msp.init(&_state, receiver, mixer);
+                _msp.init(&_state, &_demands, receiver, mixer);
 
                 // Initialize the receiver
                 _receiver->init();
