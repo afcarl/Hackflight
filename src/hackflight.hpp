@@ -106,12 +106,7 @@ namespace hf {
 
                     // Use updated demands to run motors
                     if (_state.armed && !_failsafe && !_receiver->throttleIsDown()) {
-                        Debug::printf("%2.2f %+2.2f %+2.2f %+2.2f", 
-                                demands.throttle, demands.roll, demands.pitch, demands.yaw);
                         _mixer->runArmed(demands);
-                    }
-                    else {
-                        Debug::printf("NOT FLYING");
                     }
                 }
             }
