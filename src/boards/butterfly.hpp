@@ -59,10 +59,9 @@ namespace hf {
 
             // Create byte-transfer objects for Arduino I^2C 
             ArduinoI2C mpu = ArduinoI2C(MPU9250::MPU9250_ADDRESS);
-            ArduinoI2C mag = ArduinoI2C(MPU9250::AK8963_ADDRESS);
 
-            // Use the MPU9250 in pass-through mode
-            MPU9250Passthru _imu = MPU9250Passthru(&mpu, &mag);;
+            // Use the MPU9250 in master mode
+            MPU9250Master _imu = MPU9250Master(&mpu);;
 
             // Run motor ESCs using standard Servo library
             Servo _escs[4];
@@ -72,31 +71,16 @@ namespace hf {
             // Sensor full-scale settings
             const Ascale_t ASCALE = AFS_8G;
             const Gscale_t GSCALE = GFS_2000DPS;
-            const Mscale_t MSCALE = MFS_16BITS;
-            const Mmode_t  MMODE  = M_100Hz;
 
             // SAMPLE_RATE_DIVISOR: (1 + SAMPLE_RATE_DIVISOR) is a simple divisor of the fundamental 1000 kHz rate of the gyro and accel, so 
             // SAMPLE_RATE_DIVISOR = 0 means 1 kHz sample rate for both accel and gyro, 4 means 200 Hz, etc.
             const uint8_t SAMPLE_RATE_DIVISOR = 4;         
 
-            // Global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
-            const float GYRO_MEAS_ERROR = M_PI * (40.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
-            const float GYRO_MES_DRIFT = M_PI * (0.0f  / 180.0f); // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
-            const float BETA = sqrtf(3.0f / 4.0f) * GYRO_MEAS_ERROR;   // compute BETA
-
-            // These should be computed by running MPU9250/examples/PassthruTest
-            const float MAG_BIAS[3]  = {133.f, 399.f, 336.f};
-            const float MAG_SCALE[3] = {0.90, 1.02f, 1.11f};
-
             // Instance variables -----------------------------------------------------------------------------------
 
-            // This will be read from the AK8963 ROM on startup
-            float _magCalibration[3]  = {0.f, 0.f, 0.f};
-
-            // For scaling to normal units (accelerometer G's, gyrometer rad/sec, magnetometer mGauss)
+            // For scaling to normal units (accelerometer G's, gyrometer rad/sec
             float _aRes;
             float _gRes;
-            float _mRes;
 
             // Used to read all 14 bytes at once from the MPU9250 accel/gyro
             int16_t _imuData[7] = {0,0,0,0,0,0,0};
@@ -112,6 +96,7 @@ namespace hf {
             float _gyroBias[3]        = {0,0,0};
             float _accelBias[3]       = {0,0,0};
 
+            // Accel, gyro readings are computed in getGyrometer() and used in getEulerAngles()
             float _ax, _ay, _az, _gx, _gy, _gz;
 
             // Helpers -----------------------------------------------------------------------------------
@@ -160,7 +145,7 @@ namespace hf {
 
                     gotNewData = false;
 
-                    if (_imu.checkNewAccelGyroData()) {
+                    if (_imu.checkNewData()) {
 
                         _imu.readMPU9250Data(_imuData); 
 
@@ -256,16 +241,12 @@ namespace hf {
                 // get sensor resolutions, only need to do this once
                 _aRes = _imu.getAres(ASCALE);
                 _gRes = _imu.getGres(GSCALE);
-                _mRes = _imu.getMres(MSCALE);
 
                 // Calibrate gyro and accelerometers, load biases in bias registers
                 _imu.calibrateMPU9250(_gyroBias, _accelBias); 
 
                 // Initialize the MPU9250
                 _imu.initMPU9250(ASCALE, GSCALE, SAMPLE_RATE_DIVISOR); 
-
-                // Get magnetometer calibration from AK8963 ROM
-                _imu.initAK8963(MSCALE, MMODE, _magCalibration);
 
                 // Do general real-board initialization
                 RealBoard::init();
