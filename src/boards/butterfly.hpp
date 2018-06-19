@@ -26,8 +26,8 @@
 
 #include <MPU9250.h> 
 #include <ArduinoTransfer.h>
+#include <MahonyAHRS.h>
 
-#include "quaternionFilters.hpp"
 #include "hackflight.hpp"
 #include "realboard.hpp"
 
@@ -77,11 +77,7 @@ namespace hf {
 
             // SAMPLE_RATE_DIVISOR: (1 + SAMPLE_RATE_DIVISOR) is a simple divisor of the fundamental 1000 kHz rate of the gyro and accel, so 
             // SAMPLE_RATE_DIVISOR = 0 means 1 kHz sample rate for both accel and gyro, 4 means 200 Hz, etc.
-            const uint8_t SAMPLE_RATE_DIVISOR = 0;         
-
-            // Quaternion calculation
-            const uint8_t  QUATERNION_UPDATES_PER_CYCLE = 10;  // update quaternion this many times per gyro aquisition
-            const uint16_t QUATERNION_DIVISOR           = 5;   // report a new quaternion available after this many gyro acquisitions
+            const uint8_t SAMPLE_RATE_DIVISOR = 4;         
 
             // Global constants for 9 DoF fusion and AHRS (Attitude and Heading Reference System)
             const float GYRO_MEAS_ERROR = M_PI * (40.0f / 180.0f); // gyroscope measurement error in rads/s (start at 40 deg/s)
@@ -106,14 +102,17 @@ namespace hf {
             int16_t _imuData[7] = {0,0,0,0,0,0,0};
 
             // Quaternion support
-            MadgwickQuaternion _quaternionCalculator = MadgwickQuaternion(BETA);
-            uint32_t _gyroCycleCount = 0;            // used to under-sample quaternions compute in gyro update
-            uint32_t _timePrev = 0;                  // used to calculate integration interval
-            float _q[4] = {1.0f, 0.0f, 0.0f, 0.0f};  // vector to hold quaternion
+            Mahony filter;
+            const float QUATERNION_HZ = 200.f;
+            const float QUATERNION_INPUT_SCALE = 50.f;
+            const uint32_t MICROS_PER_READING = 1000000 / QUATERNION_HZ;
+            unsigned long  _microsPrevious;
 
             // We compute these at startup
             float _gyroBias[3]        = {0,0,0};
             float _accelBias[3]       = {0,0,0};
+
+            float _ax, _ay, _az, _gx, _gy, _gz;
 
             // Helpers -----------------------------------------------------------------------------------
 
@@ -163,54 +162,22 @@ namespace hf {
 
                     if (_imu.checkNewAccelGyroData()) {
 
-                        // This will be reset in getQuaternion()
-                        _gyroCycleCount++;
-
                         _imu.readMPU9250Data(_imuData); 
 
                         // Convert the accleration value into g's
-                        float ax = _imuData[0]*_aRes - _accelBias[0];  // get actual g value, this depends on scale being set
-                        float ay = _imuData[1]*_aRes - _accelBias[1];   
-                        float az = _imuData[2]*_aRes - _accelBias[2];  
+                        _ax = _imuData[0]*_aRes - _accelBias[0];  // get actual g value, this depends on scale being set
+                        _ay = _imuData[1]*_aRes - _accelBias[1];   
+                        _az = _imuData[2]*_aRes - _accelBias[2];  
 
                         // Convert the gyro value into degrees per second
-                        float gx = adc2rad(_imuData[4], _gyroBias[0]);
-                        float gy = adc2rad(_imuData[5], _gyroBias[1]);
-                        float gz = adc2rad(_imuData[6], _gyroBias[2]);
-
-                        // We're using pass-through mode, so magnetometer values are updated at their own rate
-                        static float mx, my, mz;
-
-                        if (_imu.checkNewMagData()) { // Wait for magnetometer data ready bit to be set
-
-                            int16_t magCount[3];    // Stores the 16-bit signed magnetometer sensor output
-
-                            _imu.readMagData(magCount);  // Read the x/y/z adc values
-
-                            // Calculate the magnetometer values in milliGauss
-                            // Include factory calibration per data sheet and user environmental corrections
-                            // Get actual magnetometer value, this depends on scale being set
-                            mx = (magCount[0]*_mRes*_magCalibration[0] - MAG_BIAS[0]) * MAG_SCALE[0];  
-                            my = (magCount[1]*_mRes*_magCalibration[1] - MAG_BIAS[1]) * MAG_SCALE[1];  
-                            mz = (magCount[2]*_mRes*_magCalibration[2] - MAG_BIAS[2]) * MAG_SCALE[2];  
-                        }
-
-                        // Iterate a fixed number of times per data read cycle, updating the quaternion
-                        for (uint8_t i=0; i<QUATERNION_UPDATES_PER_CYCLE; i++) { 
-
-                            uint32_t timeCurr = micros();
-
-                            // Set integration time by time elapsed since last filter update
-                            float deltat = ((timeCurr - _timePrev)/1000000.0f); 
-                            _timePrev = timeCurr;
-
-                            _quaternionCalculator.update(-ax, ay, az, gx, -gy, -gz, my, -mx, mz, deltat, _q);
-                        }
+                        _gx = adc2rad(_imuData[4], _gyroBias[0]);
+                        _gy = adc2rad(_imuData[5], _gyroBias[1]);
+                        _gz = adc2rad(_imuData[6], _gyroBias[2]);
 
                         // Copy gyro values back out
-                        gyro[0] = gx;
-                        gyro[1] = gy;
-                        gyro[2] = gz;
+                        gyro[0] = _gx;
+                        gyro[1] = _gy;
+                        gyro[2] = _gz;
 
                         return true;
 
@@ -221,18 +188,23 @@ namespace hf {
                 return false;
             }
 
-            bool getQuaternion(float quat[4])
+            bool getEulerAngles(float eulerAngles[3])
             {
-                if(_gyroCycleCount == QUATERNION_DIVISOR) {
+                uint32_t microsCurrent = micros();
+                if (microsCurrent - _microsPrevious >= MICROS_PER_READING) {
 
-                    // Reset accumulators
-                    _gyroCycleCount = 0;
+                    // update the quaternion filter
+                    filter.updateIMU(QUATERNION_INPUT_SCALE*_gx, QUATERNION_INPUT_SCALE*_gy, QUATERNION_INPUT_SCALE*_gz, QUATERNION_INPUT_SCALE*_ax, QUATERNION_INPUT_SCALE*_ay, QUATERNION_INPUT_SCALE*_az);
 
-                    // Copy quaternion values back out
-                    memcpy(quat, _q, 4*sizeof(float));
+                    eulerAngles[0] = filter.getRollRadians();
+                    eulerAngles[1] = filter.getPitchRadians();
+                    eulerAngles[2] = filter.getYawRadians();
+
+                    _microsPrevious = microsCurrent;
 
                     return true;
-                }
+
+                } 
 
                 return false;
             }
@@ -278,6 +250,9 @@ namespace hf {
                 // Reset the MPU9250
                 _imu.resetMPU9250(); 
 
+                // Start the quaternion filter
+                filter.begin(QUATERNION_HZ);
+
                 // get sensor resolutions, only need to do this once
                 _aRes = _imu.getAres(ASCALE);
                 _gRes = _imu.getGres(GSCALE);
@@ -294,6 +269,9 @@ namespace hf {
 
                 // Do general real-board initialization
                 RealBoard::init();
+
+                // Reset timer for quaternion update
+                _microsPrevious = 0;
             }
 
 

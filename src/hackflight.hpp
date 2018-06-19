@@ -60,34 +60,13 @@ namespace hf {
                 return fabs(_state.eulerAngles[axis]) < _stabilizer->maxArmingAngle;
             }
 
-            void checkQuaternion(void)
-            {
-                float q[4];
-
-                if (_board->getQuaternion(q)) {
-
-                    _state.eulerAngles[0] = atan2(2.0f * (q[0] * q[1] + q[2] * q[3]), q[0] * q[0] - q[1] * q[1] - q[2] * q[2] + q[3] * q[3]);
-                    _state.eulerAngles[1] = asin(2.0f * (q[1] * q[3] - q[0] * q[2]));
-                    _state.eulerAngles[2] = atan2(2.0f * (q[1] * q[2] + q[0] * q[3]), q[0] * q[0] + q[1] * q[1] - q[2] * q[2] - q[3] * q[3]); 
-
-                    // Convert heading from [-pi,+pi] to [0,2*pi]
-                    if (_state.eulerAngles[AXIS_YAW] < 0) {
-                        _state.eulerAngles[AXIS_YAW] += 2*M_PI;
-                    }
-
-                    // Update stabilizer with new Euler angles
-                    _stabilizer->updateEulerAngles(_state.eulerAngles);
-
-                    // Synch serial comms to quaternion check
-                    doSerialComms();
-                }
-            }
-
             void checkGyroRates(void)
             {
                 float gyroRates[3];
 
                 if (_board->getGyrometer(gyroRates)) {
+
+                    //Debug::printf("%+2.2f   %+2.2f    %+2.2f\n", _state.eulerAngles[0], _state.eulerAngles[1], _state.eulerAngles[2]);
 
                     // Start with demands from receiver
                     demands_t demands;
@@ -103,6 +82,27 @@ namespace hf {
                     if (_state.armed && !_failsafe && !_receiver->throttleIsDown()) {
                         _mixer->runArmed(demands);
                     }
+                }
+            }
+
+            void checkEulerAngles(void)
+            {
+                float angles[3];
+
+                if (_board->getEulerAngles(angles)) {
+
+                    memcpy(&_state.eulerAngles, angles, 3*sizeof(float));
+
+                    // Convert heading from [-pi,+pi] to [0,2*pi]
+                    if (_state.eulerAngles[AXIS_YAW] < 0) {
+                        _state.eulerAngles[AXIS_YAW] += 2*M_PI;
+                    }
+
+                    // Update stabilizer with new Euler angles
+                    _stabilizer->updateEulerAngles(_state.eulerAngles);
+
+                    // Synch serial comms to Euler angles check
+                    doSerialComms();
                 }
             }
 
@@ -214,7 +214,7 @@ namespace hf {
             void update(void)
             {
                 checkGyroRates();
-                checkQuaternion();
+                checkEulerAngles();
                 checkReceiver();
                 checkAccelerometer();
                 checkBarometer();
