@@ -88,7 +88,6 @@ namespace hf {
             // Quaternion support
             Mahony filter;
             const float QUATERNION_HZ = 200.f;
-            const float QUATERNION_INPUT_SCALE = 50.f;
             const uint32_t MICROS_PER_READING = 1000000 / QUATERNION_HZ;
             unsigned long  _microsPrevious;
 
@@ -98,14 +97,6 @@ namespace hf {
 
             // Accel, gyro readings are computed in getGyrometer() and used in getEulerAngles()
             float _ax, _ay, _az, _gx, _gy, _gz;
-
-            // Helpers -----------------------------------------------------------------------------------
-
-            // Raw analog-to-digital values converted to radians per second
-            float adc2rad(int16_t adc) 
-            {
-                return (adc * _gRes) * M_PI / 180;
-            }
 
         protected:
 
@@ -149,20 +140,20 @@ namespace hf {
 
                         _imu.readMPU9250Data(_imuData); 
 
-                        // Convert the accleration value into g's
+                        // Convert the accleration values into g's
                         _ax = _imuData[0]*_aRes - _accelBias[0];  // get actual g value, this depends on scale being set
                         _ay = _imuData[1]*_aRes - _accelBias[1];   
                         _az = _imuData[2]*_aRes - _accelBias[2];  
 
-                        // Convert the gyro value into degrees per second
-                        _gx = adc2rad(_imuData[4]);
-                        _gy = adc2rad(_imuData[5]);
-                        _gz = adc2rad(_imuData[6]);
+                        // Convert the gyro values into degrees per second for quaternion
+                        _gx = _imuData[4] * _gRes;
+                        _gy = _imuData[5] * _gRes;
+                        _gz = _imuData[6] * _gRes;
 
-                        // Copy gyro values back out
-                        gyro[0] = _gx;
-                        gyro[1] = _gy;
-                        gyro[2] = _gz;
+                        // Copy gyro values back out as radians per second
+                        gyro[0] = _gx * M_PI / 180;
+                        gyro[1] = _gy * M_PI / 180;
+                        gyro[2] = _gz * M_PI / 180;
 
                         return true;
 
@@ -179,7 +170,7 @@ namespace hf {
                 if (microsCurrent - _microsPrevious >= MICROS_PER_READING) {
 
                     // update the quaternion filter
-                    filter.updateIMU(QUATERNION_INPUT_SCALE*_gx, QUATERNION_INPUT_SCALE*_gy, QUATERNION_INPUT_SCALE*_gz, QUATERNION_INPUT_SCALE*_ax, QUATERNION_INPUT_SCALE*_ay, QUATERNION_INPUT_SCALE*_az);
+                    filter.updateIMU(_gx, _gy, _gz, _ax, _ay, _az);
 
                     eulerAngles[0] = filter.getRollRadians();
                     eulerAngles[1] = filter.getPitchRadians();
