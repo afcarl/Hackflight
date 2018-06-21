@@ -102,9 +102,9 @@ namespace hf {
             // Helpers -----------------------------------------------------------------------------------
 
             // Raw analog-to-digital values converted to radians per second
-            float adc2rad(int16_t adc, float bias) 
+            float adc2rad(int16_t adc) 
             {
-                return (adc * _gRes - bias) * M_PI / 180;
+                return (adc * _gRes) * M_PI / 180;
             }
 
         protected:
@@ -155,9 +155,9 @@ namespace hf {
                         _az = _imuData[2]*_aRes - _accelBias[2];  
 
                         // Convert the gyro value into degrees per second
-                        _gx = adc2rad(_imuData[4], _gyroBias[0]);
-                        _gy = adc2rad(_imuData[5], _gyroBias[1]);
-                        _gz = adc2rad(_imuData[6], _gyroBias[2]);
+                        _gx = adc2rad(_imuData[4]);
+                        _gy = adc2rad(_imuData[5]);
+                        _gz = adc2rad(_imuData[6]);
 
                         // Copy gyro values back out
                         gyro[0] = _gx;
